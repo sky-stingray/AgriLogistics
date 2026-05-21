@@ -5,7 +5,7 @@
 [![Google OR-Tools](https://img.shields.io/badge/OR--Tools-9.8.3296-1A73E8.svg)](https://developers.google.com/optimization)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AgriLogistics is an interactive web application designed to solve the **Vehicle Routing Problem with Time Windows (VRPTW)** specifically tailored for perishable agricultural supply chains. 
+
 
 By defining the "perishable rate" of different crops (like Tomatoes, Potatoes, and Wheat) as hard time-window constraints, this tool helps logistics managers optimize fleet routes across India ensuring produce reaches its destination before spoiling.
 

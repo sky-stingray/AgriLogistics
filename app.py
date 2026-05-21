@@ -10,10 +10,8 @@ import datetime
 
 from app_utils import INDIAN_CITIES, DEFAULT_DESTINATIONS, get_available_destinations, get_default_destinations
 
-# --- Constants & Configuration ---
 st.set_page_config(page_title="AgriLogistics VRPTW", layout="wide")
 
-# --- Helper Functions ---
 def calculate_distance_matrix(locations):
     """Calculates geodesic distance matrix in kilometers."""
     n = len(locations)
@@ -28,7 +26,6 @@ def calculate_time_matrix(distance_matrix, speed_kmh=60):
     """Calculates time matrix in minutes."""
     return (distance_matrix / speed_kmh) * 60
 
-# --- OR-Tools VRPTW Solver ---
 def solve_vrptw(data):
     """Solves the VRPTW problem."""
     manager = pywrapcp.RoutingIndexManager(
@@ -36,7 +33,6 @@ def solve_vrptw(data):
     )
     routing = pywrapcp.RoutingModel(manager)
 
-    # Time Callback
     def time_callback(from_index, to_index):
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
@@ -45,35 +41,30 @@ def solve_vrptw(data):
     transit_callback_index = routing.RegisterTransitCallback(time_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
-    # Add Time Window Constraint
     time = 'Time'
     routing.AddDimension(
         transit_callback_index,
         60 * 24,  # allow waiting time (1 day in minutes)
         60 * 24 * 7,  # maximum time per vehicle (7 days)
-        False,  # Don't force start cumul to zero.
+        False, 
         time)
     time_dimension = routing.GetDimensionOrDie(time)
 
-    # Add time window constraints for each location
     for location_idx, time_window in enumerate(data['time_windows']):
         if location_idx == data['depot']:
             continue
         index = manager.NodeToIndex(location_idx)
         time_dimension.CumulVar(index).SetRange(int(time_window[0]), int(time_window[1]))
 
-    # Allow dropping nodes if time constraints are violated
     penalty = 1000000 
     for node in range(1, len(data['time_matrix'])):
         routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
 
-    # Setting first solution heuristic.
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     search_parameters.first_solution_strategy = (
         routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
     search_parameters.time_limit.seconds = 5 # Prevent UI freezing
 
-    # Solve the problem.
     solution = routing.SolveWithParameters(search_parameters)
     return manager, routing, solution
 
