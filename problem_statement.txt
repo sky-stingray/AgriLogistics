@@ -1,0 +1,103 @@
+================================================================================
+PRODUCT DEVELOPMENT SPECIFICATION & PROJECT CHARTER
+Project Codename: SmartMandi (Agri-Logistics & Dynamic Price Routing Engine)
+Duration: 2 Months | Team Size: 2 Engineers
+================================================================================
+
+1. PROBLEM TITLE
+--------------------------------------------------------------------------------
+Dynamic Vehicle Routing Optimization for Perishable Agricultural Supply Chains 
+under Multi-Market Price Volatility.
+
+
+2. EXECUTIVE SUMMARY / CONTEXT
+--------------------------------------------------------------------------------
+In the Indian agricultural sector, the post-harvest supply chain faces severe
+financial losses due to information asymmetry and inefficient logistics. Small-
+to-Medium Enterprises (SMEs), farmer collectives, and logistics providers transport
+highly volatile, perishable commodities (e.g., tomatoes, onions, potatoes) across
+a distributed network of wholesale markets (mandis). 
+
+Currently, transport routing decisions are static and geographic-centric, completely 
+ignoring real-time price signals, market arrival gluts, and transit cargo 
+degradation. This results in massive post-harvest spoilage, high fuel overheads, 
+and depressed profit margins. This project aims to build an end-to-end production 
+engine that leverages machine learning forecasting and combinatorial optimization 
+to dynamically route agri-freight to maximize net liquidation profit.
+
+
+3. CORE OBJECTIVE FORMULATION
+--------------------------------------------------------------------------------
+Design, implement, and benchmark an asynchronous backend system that accepts an 
+agri-freight payload configuration and outputs an optimal multi-stop routing 
+sequence. The optimization engine must maximize net profitability by balancing 
+predicted next-day market spot prices against non-linear cargo degradation curves 
+and transport costs.
+
+Mathematical Objective Function:
+  Maximize Net Profit = Sum[ P_hat(i,c,t) * W(i,c,t) ] - Sum[ Fuel(i,j) + Toll(i,j) ]
+
+Where:
+  * P_hat(i,c,t) = Predicted wholesale price of commodity 'c' at mandi 'i' at 
+                   arrival time 't'.
+  * W(i,c,t)     = Surviving saleable weight of commodity 'c' at arrival time 't'.
+                   Modeled via exponential decay: W_0 * e^(-lambda * delta_t), 
+                   where lambda is the crop-specific perishability coefficient.
+  * Fuel / Toll  = Deterministic financial transport overheads between nodes.
+
+
+4. TECHNICAL SCOPE & ARCHITECTURE COMPONENT DIVISION
+--------------------------------------------------------------------------------
+The project requires solving three interconnected engineering challenges over an 
+8-week timeline:
+
+CHALLENGE A: Spatial-Temporal Price Forecasting (Machine Learning Core)
+  * Functional Goal: Look past static historical data and predict tomorrow's 
+    mandi-specific spot prices.
+  * Implementation: Handle raw time-series data vectors (historical prices, arrival 
+    volumes, seasonality patterns, day-of-the-week gluts). Build and train tree-based 
+    ensembles (XGBoost/LightGBM) or advanced regression pipelines to generate a 
+    predictive next-day price matrix.
+  * Performance Benchmark: Achieve a symmetric Mean Absolute Percentage Error (sMAPE) 
+    less than 12% across highly volatile regional market regimes.
+
+CHALLENGE B: Perishable Vehicle Routing Problem (Optimization Engine)
+  * Functional Goal: Solve the multi-stop route sequence configuration. Because this 
+    is an NP-hard combinatorial problem, exact enumeration scales poorly.
+  * Implementation: Write high-performance meta-heuristic solvers (e.g., Genetic 
+    Algorithms, Simulated Annealing) natively using raw, vectorized NumPy code blocks. 
+    The engine must compute profit trade-offs (e.g., whether driving 3 hours further to 
+    a high-price mandi compensates for extra fuel and a 4% cargo weight drop).
+  * Performance Benchmark: Complete route matrix evaluations and converge on an optimal 
+    path topology in under 200 milliseconds for a standard 15-node market cluster.
+
+CHALLENGE C: High-Throughput Asynchronous Gateway (System Infrastructure)
+  * Functional Goal: Prevent CPU-bound machine learning inference and mathematical 
+    optimization loops from freezing the client-facing application.
+  * Implementation: Construct a production backend using FastAPI. Implement a decoupled, 
+    non-blocking system layout where incoming API requests are instantly validated and 
+    passed to an asynchronous task queue (Celery or Arq) using a Redis message broker.
+  * Performance Benchmark: Achieve a P99 API route acknowledgment latency of under 
+    30 milliseconds while background workers execute the heavy operations.
+
+
+5. CORE TECH STACK MATRIX
+--------------------------------------------------------------------------------
+Language Platform: Python 3.11+
+Mathematical Core: NumPy (Explicit matrix vectorization, no native loops)
+ML & Data Pipeline: Scikit-Learn, XGBoost, Pandas, Joblib
+Backend Engine: FastAPI, Uvicorn, Pydantic
+Async Task Architecture: Redis, Celery / Arq
+DevOps Engineering: Docker, Docker-Compose, Linux/cProfile (Performance profiling)
+
+
+6. KEY DELIVERABLES & CRITERIA FOR SUCCESS
+--------------------------------------------------------------------------------
+1. Clean Pipeline: Graceful fallback logic to handle missing data fields or gaps 
+   in mandi records without returning 500 Internal Server Errors.
+2. Production Deployment: Fully containerized environment spinning up deterministically 
+   via a single 'docker-compose up --build' routine.
+3. API Verifiability: A clean POST endpoint (/api/v1/route-optimize) that accepts 
+   origin, crop type, tonnage, and harvest time, and returns an ordered sequence 
+   of destination nodes, ETA windows, expected degradation, and projected net profit.
+================================================================================
